@@ -4,37 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IFC til Excel Konverter</title>
-    <script src="https://cdn.jsdelivr.net/npm/web-ifc@0.0.44/web-ifc-api.js"></script>
+
+    <!-- Web-IFC (browser build) -->
+    <script src="https://cdn.jsdelivr.net/npm/web-ifc@0.0.58/web-ifc-api-browser.js"></script>
+    <!-- SheetJS for .xlsx -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <style>
         :root {
-            --color-bg-base: #0f172a;
-            --color-bg-elevated: #1e293b;
-            --color-bg-surface: #334155;
-            --color-text-primary: #f1f5f9;
-            --color-text-secondary: #cbd5e1;
-            --color-text-muted: #94a3b8;
-            --color-primary: #38bdf8;
-            --color-primary-hover: #0ea5e9;
-            --color-success: #10b981;
-            --color-warning: #f59e0b;
-            --color-border: rgba(148, 163, 184, 0.2);
-        }
-
-        @media (prefers-color-scheme: light) {
-            :root {
-                --color-bg-base: #ffffff;
-                --color-bg-elevated: #f8fafc;
-                --color-bg-surface: #f1f5f9;
-                --color-text-primary: #0f172a;
-                --color-text-secondary: #475569;
-                --color-text-muted: #64748b;
-                --color-primary: #0284c7;
-                --color-primary-hover: #0369a1;
-                --color-success: #059669;
-                --color-warning: #d97706;
-                --color-border: rgba(15, 23, 42, 0.1);
-            }
+            --color-bg-base: #f1f5f9;
+            --color-bg-elevated: #ffffff;
+            --color-bg-surface: #e2e8f0;
+            --color-text-primary: #0f172a;
+            --color-text-secondary: #475569;
+            --color-text-muted: #64748b;
+            --color-primary: #0ea5e9;
+            --color-primary-hover: #0284c7;
+            --color-success: #16a34a;
+            --color-warning: #e11d48;
+            --color-border: rgba(148, 163, 184, 0.6);
         }
 
         * {
@@ -75,6 +63,7 @@
             padding: 2rem;
             margin-bottom: 1.5rem;
             border: 1px solid var(--color-border);
+            box-shadow: 0 10px 20px rgba(15,23,42,0.08);
         }
 
         .upload-area {
@@ -84,17 +73,17 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
-            background: var(--color-bg-base);
+            background: #f8fafc;
         }
 
         .upload-area:hover {
             border-color: var(--color-primary);
-            background: var(--color-bg-surface);
+            background: #e0f2fe;
         }
 
         .upload-area.dragover {
             border-color: var(--color-primary);
-            background: var(--color-bg-surface);
+            background: #e0f2fe;
         }
 
         .upload-icon {
@@ -108,25 +97,28 @@
 
         .btn {
             background: var(--color-primary);
-            color: var(--color-bg-base);
+            color: #ffffff;
             border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
+            padding: 0.9rem 1.7rem;
+            border-radius: 999px;
             font-size: 1rem;
             cursor: pointer;
-            transition: background 0.2s;
-            font-weight: 500;
+            transition: background 0.2s, transform 0.1s;
+            font-weight: 600;
             width: 100%;
-            margin-top: 1rem;
+            margin-top: 1.2rem;
+            letter-spacing: 0.02em;
         }
 
         .btn:hover {
             background: var(--color-primary-hover);
+            transform: translateY(-1px);
         }
 
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+            transform: none;
         }
 
         .progress-container {
@@ -146,15 +138,15 @@
             background: var(--color-bg-surface);
             border-radius: 6px;
             overflow: hidden;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: inset 0 2px 4px rgba(15,23,42,0.12);
         }
 
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, var(--color-primary), var(--color-success));
             width: 0%;
-            transition: width 0.5s ease-out;
-            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+            transition: width 0.4s ease-out;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
         }
 
         .status-text {
@@ -178,6 +170,7 @@
             justify-content: space-between;
             padding: 0.5rem 0;
             border-bottom: 1px solid var(--color-border);
+            font-size: 0.9rem;
         }
 
         .file-info-item:last-child {
@@ -219,6 +212,12 @@
         .info-section li {
             margin-bottom: 0.25rem;
         }
+
+        .init-status {
+            text-align: center;
+            padding: 0.7rem 1rem 0;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -236,7 +235,7 @@
 
             <div class="file-info" id="fileInfo"></div>
             
-            <div style="text-align: center; padding: 1rem; font-size: 0.9rem;" id="initStatus">
+            <div class="init-status" id="initStatus">
                 🔄 Laster IFC-parser...
             </div>
 
@@ -262,8 +261,8 @@
 
             <div class="info-section">
                 <h3>Eksempel på Excel-struktur</h3>
-                <p>Hver rad representerer ett IFC-objekt (f.eks. IfcWall, IfcDoor)</p>
-                <p style="margin-top: 0.5rem;">Kolonner inkluderer: GlobalId, Type, Name, Description, og alle tilknyttede parametere</p>
+                <p>Hver rad representerer ett IFC-objekt (f.eks. IfcWall, IfcDoor).</p>
+                <p style="margin-top: 0.5rem;">Kolonner inkluderer: GlobalId, Type, Name, Description, og alle tilknyttede parametere.</p>
             </div>
         </div>
     </div>
@@ -273,50 +272,6 @@
         let ifcAPI = null;
         let modelID = null;
 
-        // Initialize Web-IFC
-        async function initWebIFC() {
-            try {
-                console.log('Initializing Web-IFC...');
-                
-                // Wait for WebIFC to be available
-                let attempts = 0;
-                while (typeof WebIFC === 'undefined' && attempts < 100) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    attempts++;
-                }
-                
-                if (typeof WebIFC === 'undefined') {
-                    throw new Error('WebIFC library ikke lastet etter 10 sekunder');
-                }
-                
-                console.log('WebIFC loaded, creating API instance...');
-                ifcAPI = new WebIFC.IfcAPI();
-                await ifcAPI.Init();
-                
-                console.log('✅ Web-IFC initialized successfully');
-                updateStatus('✅ IFC-parser klar');
-            } catch (error) {
-                console.error('❌ Failed to initialize Web-IFC:', error);
-                updateStatus('❌ Kunne ikke laste IFC-parser. Last siden på nytt (F5)');
-            }
-        }
-        
-        function updateStatus(message) {
-            const statusDiv = document.getElementById('initStatus');
-            if (statusDiv) {
-                statusDiv.textContent = message;
-                statusDiv.style.color = message.includes('✅') ? 'var(--color-success)' : 
-                                       message.includes('❌') ? 'var(--color-warning)' : 
-                                       'var(--color-text-secondary)';
-            }
-        }
-
-        // Initialize on load
-        window.addEventListener('load', () => {
-            initWebIFC();
-        });
-
-        // File upload handling
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const convertBtn = document.getElementById('convertBtn');
@@ -324,6 +279,57 @@
         const progressContainer = document.getElementById('progressContainer');
         const progressFill = document.getElementById('progressFill');
         const statusText = document.getElementById('statusText');
+        const initStatus = document.getElementById('initStatus');
+
+        function setInitStatus(message, type = 'info') {
+            initStatus.textContent = message;
+            if (type === 'ok') {
+                initStatus.style.color = '#16a34a';
+            } else if (type === 'error') {
+                initStatus.style.color = '#e11d48';
+            } else {
+                initStatus.style.color = '#475569';
+            }
+        }
+
+        async function initWebIFC() {
+            try {
+                console.log('Initializing Web-IFC...');
+                console.log('window.WebIFC at start:', window.WebIFC);
+
+                let attempts = 0;
+                while (!window.WebIFC && attempts < 50) {
+                    await new Promise(r => setTimeout(r, 100));
+                    attempts++;
+                }
+
+                if (!window.WebIFC) {
+                    console.error('WebIFC library never became available');
+                    setInitStatus('❌ Kunne ikke laste IFC-parser. Last siden på nytt (Ctrl+R)', 'error');
+                    return;
+                }
+
+                console.log('WebIFC object:', window.WebIFC);
+
+                const IfcAPI = window.WebIFC.IfcAPI;
+                ifcAPI = new IfcAPI();
+
+                // Viktig: samme CDN/versjon for wasm-path
+                const wasmBase = 'https://cdn.jsdelivr.net/npm/web-ifc@0.0.58/';
+                ifcAPI.SetWasmPath(wasmBase);
+                await ifcAPI.Init();
+
+                console.log('✅ Web-IFC initialized');
+                setInitStatus('✅ IFC-parser klar', 'ok');
+            } catch (err) {
+                console.error('Failed to initialize Web-IFC:', err);
+                setInitStatus('❌ Feil ved lasting av IFC-parser', 'error');
+            }
+        }
+
+        window.addEventListener('load', () => {
+            initWebIFC();
+        });
 
         uploadArea.addEventListener('click', () => fileInput.click());
 
@@ -356,11 +362,6 @@
 
         function handleFileSelect(file) {
             selectedFile = file;
-            displayFileInfo(file);
-            convertBtn.disabled = false;
-        }
-
-        function displayFileInfo(file) {
             const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
             fileInfo.innerHTML = `
                 <div class="file-info-item">
@@ -377,6 +378,7 @@
                 </div>
             `;
             fileInfo.style.display = 'block';
+            convertBtn.disabled = false;
         }
 
         function updateProgress(percent, message) {
@@ -397,7 +399,14 @@
             console.log('ifcAPI:', ifcAPI);
             console.log('WebIFC available:', typeof WebIFC);
             console.log('XLSX available:', typeof XLSX);
-            
+
+            convertBtn.disabled = true;
+            progressContainer.style.display = 'block';
+            progressFill.style.width = '0%';
+            updateProgress(5, 'Starter konvertering...');
+
+            await new Promise(r => setTimeout(r, 80));
+
             if (!selectedFile) {
                 console.error('No file selected');
                 updateProgress(0, '❌ Ingen fil valgt');
@@ -407,10 +416,11 @@
                 }, 2000);
                 return;
             }
-            
+
             if (!ifcAPI) {
                 console.error('IFC API not initialized');
-                updateProgress(0, '❌ IFC-parser ikke klar. Vent eller last siden på nytt.');
+                updateProgress(0, '❌ IFC-parser ikke klar. Prøv å laste siden på nytt.');
+                setInitStatus('❌ IFC-parser ikke klar. Last siden på nytt (Ctrl+R)', 'error');
                 setTimeout(() => {
                     progressContainer.style.display = 'none';
                     convertBtn.disabled = false;
@@ -418,48 +428,32 @@
                 return;
             }
 
-            console.log('Starting conversion process...');
-            convertBtn.disabled = true;
-            progressContainer.style.display = 'block';
-            progressFill.style.width = '0%';
-            updateProgress(5, 'Starter konvertering...');
-
-            // Force UI update
-            await new Promise(resolve => setTimeout(resolve, 100));
-
             try {
                 console.log('Reading file as array buffer...');
-                updateProgress(10, 'Leser IFC-fil...');
-                // Read file as array buffer
+                updateProgress(15, 'Leser IFC-fil...');
                 const arrayBuffer = await selectedFile.arrayBuffer();
                 const data = new Uint8Array(arrayBuffer);
-
                 console.log('Array buffer size:', arrayBuffer.byteLength);
-                updateProgress(20, 'Parser IFC-struktur...');
 
-                // Open IFC model
+                updateProgress(30, 'Parser IFC-struktur...');
                 console.log('Opening IFC model...');
                 modelID = ifcAPI.OpenModel(data);
                 console.log('Model opened with ID:', modelID);
 
-                updateProgress(40, 'Henter IFC-objekter...');
-
-                // Get all lines (entities)
+                updateProgress(45, 'Henter IFC-objekter...');
                 console.log('Getting all lines...');
                 const allLines = ifcAPI.GetAllLines(modelID);
                 console.log('Total lines found:', allLines.size);
-                const excelData = [];
 
-                // Header row
+                const excelData = [];
                 const headers = ['GlobalId', 'ExpressID', 'Type', 'Name', 'Description', 'ObjectType', 'Tag'];
                 excelData.push(headers);
 
-                updateProgress(50, `Prosesserer ${allLines.size} objekter...`);
+                updateProgress(55, `Prosesserer ${allLines.size} objekter...`);
 
                 let processed = 0;
                 const totalLines = allLines.size;
 
-                // Process each entity
                 for (const lineID of allLines) {
                     try {
                         const entity = ifcAPI.GetLine(modelID, lineID);
@@ -475,24 +469,23 @@
                             entity.Tag?.value || ''
                         ];
 
-                        // Add any additional properties
                         for (const [key, value] of Object.entries(entity)) {
                             if (!headers.includes(key) && key !== 'expressID' && typeof value !== 'object') {
-                                const headerIndex = headers.indexOf(key);
-                                if (headerIndex === -1) {
+                                const idx = headers.indexOf(key);
+                                if (idx === -1) {
                                     headers.push(key);
                                     row.push(getPropertyValue(value));
                                 } else {
-                                    row[headerIndex] = getPropertyValue(value);
+                                    row[idx] = getPropertyValue(value);
                                 }
                             }
                         }
 
                         excelData.push(row);
-
                         processed++;
+
                         if (processed % 100 === 0) {
-                            const percent = 50 + (processed / totalLines) * 40;
+                            const percent = 55 + (processed / totalLines) * 35;
                             updateProgress(percent, `Prosessert ${processed} av ${totalLines} objekter...`);
                         }
                     } catch (err) {
@@ -504,34 +497,28 @@
                 console.log('Headers:', headers);
                 updateProgress(90, 'Genererer Excel-fil...');
 
-                // Create Excel workbook
                 console.log('Creating Excel workbook...');
                 const wb = XLSX.utils.book_new();
                 const ws = XLSX.utils.aoa_to_sheet(excelData);
 
-                // Auto-width columns
                 const maxWidths = headers.map((_, colIndex) => {
                     return Math.max(
                         ...excelData.map(row => (row[colIndex] || '').toString().length),
                         20
                     );
                 });
-
                 ws['!cols'] = maxWidths.map(w => ({ wch: Math.min(w, 50) }));
 
                 XLSX.utils.book_append_sheet(wb, ws, 'IFC Data');
 
-                updateProgress(95, 'Laster ned...');
-
-                // Generate and download
-                const fileName = selectedFile.name.replace('.ifc', '') + '.xlsx';
+                updateProgress(96, 'Laster ned...');
+                const fileName = selectedFile.name.replace(/\.ifc$/i, '') + '.xlsx';
                 console.log('Writing file:', fileName);
                 XLSX.writeFile(wb, fileName);
                 console.log('File written successfully');
 
                 updateProgress(100, `Ferdig! ${excelData.length - 1} objekter eksportert`);
 
-                // Close model
                 ifcAPI.CloseModel(modelID);
 
                 setTimeout(() => {
@@ -542,10 +529,7 @@
 
             } catch (error) {
                 console.error('Conversion error:', error);
-                console.error('Full error:', error);
-                updateProgress(0, 'Feil oppstod');
-                alert('Feil ved konvertering: ' + error.message + '\n\nSjekk konsollen for mer info (F12)');
-                
+                updateProgress(0, 'Feil oppstod under konvertering');
                 setTimeout(() => {
                     progressContainer.style.display = 'none';
                     progressFill.style.width = '0%';
@@ -559,9 +543,8 @@
             console.log('Button disabled state:', convertBtn.disabled);
             convertIFCtoExcel();
         });
-        
+
         console.log('Event listener attached to convert button');
     </script>
 </body>
 </html>
-
